@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Web Socket Test</title>
+<script type="text/javascript" src="https://code.jquery.com/jquery-2.1.3.min.js"></script>
+<script type="text/javascript">
+	function Binary() {
+		
+	}
+	Binary.prototype.OpenFile = function (event) {
+		var input = event.target;
+		var reader = new FileReader();
+		reader.onload = function() {
+			var text = reader.result;	
+			console.log(text);
+		}
+		reader.onloadstart = function () {
+			console.log('Start');
+		}
+		reader.onprogress = function() {
+			console.log('Progress');
+		}
+		reader.onabort = function() {
+			console.log('Abort');
+		}
+		reader.onerror = function () {
+			console.log('Error');
+		}
+		reader.onloadend = function() {
+			console.log('End');
+		}
+		
+		reader.readAsText(input.files[0]);
+	}
+	window.binary = new Binary();
+	function Hub() {
+		this.webSocket = null;
+		this.self = this;
+	}
+	Hub.prototype.Connect = function () {
+		var self = this;
+		$.ajax({
+			type: 'GET',
+			url: '/test',
+			success: function(msg) {
+				Log(msg);
+				self.webSocket = new WebSocket('ws://localhost:8080/echo', 'text');
+				
+				self.webSocket.onopen = self.OnOpen;
+				self.webSocket.onmessage = self.OnMessage;
+				self.webSocket.onclose = self.OnClose;
+			}
+		});
+		
+	}
+	Log = function(msg) {
+		$('#debug').val(msg + '\n' + $('#debug').val());
+	}
+	
+	Hub.prototype.OnOpen = function(evt) {
+		
+		Log('Open');
+	}
+	Hub.prototype.OnMessage = function (evt) {
+		if (evt.data.startsWith('data:image/png;base64,')) {
+			$('#img').attr('src', evt.data);
+		} else {
+			Log('Message: ' + evt.data);
+		}
+	}
+	Hub.prototype.OnClose = function (evt) {
+		Log('Close');
+	}
+	
+	Hub.prototype.Send = function () {
+		var msg = $('#msg').val();
+		Log('Send: ' + msg);
+		this.webSocket.send(msg);
+	}
+	window.hub = new Hub();
+</script>
+</head>
+<body>
+<textarea id="debug" rows="20"></textarea>
+<input type="button" value="Connect" onclick="hub.Connect();" />
+<input type="text" id="msg" />
+<input type="button" value="Send" onclick="hub.Send();" />
+<img id="img" />
+<input type="file" onclick="binary.OpenFile(event);" />
+</body>
+</html>
